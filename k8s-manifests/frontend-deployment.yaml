@@ -1,26 +1,26 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: backend-deployment
+  name: frontend-deployment
   namespace: default
   labels:
-    app: backend
+    app: frontend
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: backend
+      app: frontend
   template:
     metadata:
       labels:
-        app: backend
+        app: frontend
     spec:
       containers:
-      - name: backend
-        image: 879343932773.dkr.ecr.us-east-1.amazonaws.com/three-tier-backend:latest
+      - name: frontend
+        image: 879343932773.dkr.ecr.us-east-1.amazonaws.com/three-tier-frontend:latest
         imagePullPolicy: Always
         ports:
-        - containerPort: 5000
+        - containerPort: 80
         resources:
           limits:
             cpu: "500m"
