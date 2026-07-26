@@ -1,0 +1,44 @@
+name: DevSecOps Build & Push
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Security Scan (Trivy)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          ignore-unfixed: true
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build & Push Images
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # Build and push Frontend image
+          docker build -t $ECR_REGISTRY/three-tier-frontend:$IMAGE_TAG -t $ECR_REGISTRY/three-tier-frontend:latest ./app/frontend
+          docker push $ECR_REGISTRY/three-tier-frontend --all-tags
+          
+          # Build and push Backend image
+          docker build -t $ECR_REGISTRY/three-tier-backend:$IMAGE_TAG -t $ECR_REGISTRY/three-tier-backend:latest ./app/backend
+          docker push $ECR_REGISTRY/three-tier-backend --all-tags
