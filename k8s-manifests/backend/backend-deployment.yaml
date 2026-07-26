@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+  namespace: three-tier
+  labels:
+    app: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      securityContext:
+        fsGroup: 1000
+      containers:
+      - name: backend
+        # Replace __IMAGE_TAG__ with your CI build number / git SHA, e.g. via
+        # `sed -i "s/__IMAGE_TAG__/${BUILD_NUMBER}/" backend-deployment.yaml`
+        # in your Jenkins pipeline. Never ship :latest to a cluster - you lose
+        # the ability to know what's running or roll back to it.
+        image: 879343932773.dkr.ecr.us-east-1.amazonaws.com/three-tier-backend:__IMAGE_TAG__
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5000
+        env:
+        - name: MYSQL_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: MYSQL_HOST
+        - name: MYSQL_DB
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: MYSQL_DATABASE
+        - name: MYSQL_USER
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: MYSQL_USER
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: MYSQL_ROOT_PASSWORD
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "250m"
+            memory: "256Mi"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 20
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]

@@ -1,0 +1,126 @@
+# Default deny everything in the namespace, then explicitly allow only the
+# traffic paths this app actually needs:
+#   ALB -> frontend:80
+#   ALB -> backend:5000        (for the /api path)
+#   frontend -> backend:5000   (only needed if frontend makes server-side calls)
+#   backend  -> mysql:3306
+#   everything -> kube-dns:53  (needed for any DNS resolution at all)
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: three-tier
+spec:
+  podSelector: {}
+  policyTypes: ["Ingress", "Egress"]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: three-tier
+spec:
+  podSelector: {}
+  policyTypes: ["Egress"]
+  egress:
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: frontend-ingress
+  namespace: three-tier
+spec:
+  podSelector:
+    matchLabels:
+      app: frontend
+  policyTypes: ["Ingress"]
+  ingress:
+  # ALB traffic arrives from outside the pod network (via VPC CNI), not from
+  # another pod, so it can't be matched with a podSelector - this allows any
+  # source on port 80. It still blocks everything else, including all lateral
+  # pod-to-pod traffic on other ports.
+  - from: []
+    ports:
+    - protocol: TCP
+      port: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: frontend-egress
+  namespace: three-tier
+spec:
+  podSelector:
+    matchLabels:
+      app: frontend
+  policyTypes: ["Egress"]
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: backend
+    ports:
+    - protocol: TCP
+      port: 5000
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-ingress
+  namespace: three-tier
+spec:
+  podSelector:
+    matchLabels:
+      app: backend
+  policyTypes: ["Ingress"]
+  ingress:
+  - from: []   # ALB hits backend directly for the /api path
+    ports:
+    - protocol: TCP
+      port: 5000
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-egress
+  namespace: three-tier
+spec:
+  podSelector:
+    matchLabels:
+      app: backend
+  policyTypes: ["Egress"]
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: mysql
+    ports:
+    - protocol: TCP
+      port: 3306
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mysql-ingress
+  namespace: three-tier
+spec:
+  podSelector:
+    matchLabels:
+      app: mysql
+  policyTypes: ["Ingress"]
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: backend
+    ports:
+    - protocol: TCP
+      port: 3306

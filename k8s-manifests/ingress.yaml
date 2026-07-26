@@ -2,11 +2,17 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: three-tier-ingress
-  namespace: default
+  namespace: three-tier
   annotations:
     kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    # Request/import an ACM cert for your domain and paste its ARN here.
+    # Without this, ssl-redirect above will have nothing to redirect TO.
+    alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:us-east-1:879343932773:certificate/REPLACE_ME"
+    alb.ingress.kubernetes.io/healthcheck-path: /health
 spec:
   rules:
   - http:

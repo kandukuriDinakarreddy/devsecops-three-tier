@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-config
+  namespace: three-tier
+data:
+  MYSQL_DATABASE: "devops"
+  MYSQL_HOST: "mysql"
+  # NOTE: app.py currently connects as MYSQL_USER=root (matches your docker-compose.yml).
+  # For anything beyond a demo, create a dedicated app DB user instead of using root -
+  # see the "next steps" note at the bottom of this response.
+  MYSQL_USER: "root"
