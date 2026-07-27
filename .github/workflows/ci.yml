@@ -2,7 +2,10 @@ name: DevSecOps Build & Push
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]   # was "main" - your default branch is master, so this never ran before
+
+permissions:
+  contents: write   # needed so the workflow can commit the updated image tag back
 
 jobs:
   build-and-push:
@@ -30,15 +33,26 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build & Push Images
+      - name: Build & Push Image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          # Build and push Frontend image
-          docker build -t $ECR_REGISTRY/three-tier-frontend:$IMAGE_TAG -t $ECR_REGISTRY/three-tier-frontend:latest ./app/frontend
-          docker push $ECR_REGISTRY/three-tier-frontend --all-tags
-          
-          # Build and push Backend image
-          docker build -t $ECR_REGISTRY/three-tier-backend:$IMAGE_TAG -t $ECR_REGISTRY/three-tier-backend:latest ./app/backend
-          docker push $ECR_REGISTRY/three-tier-backend --all-tags
+          # Single image: your app is one Flask container, not separate frontend/backend.
+          # Build context is ./app (where the Dockerfile actually lives).
+          docker build -t $ECR_REGISTRY/three-tier-app:$IMAGE_TAG -t $ECR_REGISTRY/three-tier-app:latest ./app
+          docker push $ECR_REGISTRY/three-tier-app --all-tags
+
+      - name: Update k8s manifest with real image tag
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          sed -i "s|three-tier-app:__IMAGE_TAG__|three-tier-app:${IMAGE_TAG}|g" k8s-manifests/app/app-deployment.yaml
+
+      - name: Commit updated manifest
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add k8s-manifests/app/app-deployment.yaml
+          git diff --quiet --cached || git commit -m "ci: deploy image ${GITHUB_SHA}"
+          git push
