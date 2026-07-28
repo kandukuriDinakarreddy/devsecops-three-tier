@@ -20,7 +20,7 @@ spec:
       containers:
       - name: app
         # CI replaces __IMAGE_TAG__ with the real git SHA on every push to master.
-        image: 879343932773.dkr.ecr.us-east-1.amazonaws.com/three-tier-app:__IMAGE_TAG__
+        image: 879343932773.dkr.ecr.us-east-1.amazonaws.com/three-tier-app:dcf009aba82bb0e35791d4a9f33c05c9ada15856
         imagePullPolicy: Always
         ports:
         - containerPort: 5000
