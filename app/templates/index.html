@@ -1,0 +1,918 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CivicBoard — Community Notice Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #F5F2EB;
+    --surface: #FDFCF8;
+    --border: #E0DACC;
+    --border-strong: #C8C0B0;
+    --text: #1C1A15;
+    --text-muted: #6B6559;
+    --text-faint: #A09888;
+    --accent: #2D5A3D;
+    --accent-light: #EAF3E6;
+    --accent-text: #1A3D28;
+    --cat-help: #7B3E1C; --cat-help-bg: #FDF0E8;
+    --cat-lost: #1C3A7B; --cat-lost-bg: #E8EEFB;
+    --cat-event: #4A1C7B; --cat-event-bg: #F0E8FB;
+    --cat-announce: #1C5A4A; --cat-announce-bg: #E8F5F0;
+    --cat-free: #7B6B1C; --cat-free-bg: #FBF8E8;
+    --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04);
+    --shadow-hover: 0 4px 16px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.06);
+    --radius: 12px;
+    --radius-sm: 6px;
+    --transition: 0.18s ease;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .header-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    height: 64px;
+  }
+
+  .logo {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    text-decoration: none;
+    flex-shrink: 0;
+  }
+
+  .logo-name {
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px;
+    color: var(--text);
+    letter-spacing: -0.5px;
+  }
+
+  .logo-badge {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--accent-text);
+    background: var(--accent-light);
+    border: 1px solid #B8D8C4;
+    padding: 2px 8px;
+    border-radius: 99px;
+    letter-spacing: 0.3px;
+  }
+
+  .header-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .btn-post {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 8px 18px;
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background var(--transition), transform var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-post:hover { background: #234830; transform: translateY(-1px); }
+  .btn-post:active { transform: translateY(0); }
+  .btn-post svg { width: 15px; height: 15px; }
+
+  .health-dot {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--text-faint);
+  }
+  .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #ccc;
+    flex-shrink: 0;
+  }
+  .dot.online { background: #3D9E60; animation: pulse 2s infinite; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* MAIN LAYOUT */
+  .page { max-width: 1100px; margin: 0 auto; padding: 2rem; display: grid; grid-template-columns: 240px 1fr; gap: 2rem; }
+
+  /* SIDEBAR */
+  .sidebar {}
+
+  .sidebar-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+  }
+
+  .sidebar-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-bottom: 0.75rem;
+  }
+
+  .filter-list { display: flex; flex-direction: column; gap: 2px; }
+
+  .filter-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    text-align: left;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--text-muted);
+    transition: background var(--transition), color var(--transition);
+  }
+  .filter-btn:hover { background: var(--bg); color: var(--text); }
+  .filter-btn.active { background: var(--accent-light); color: var(--accent-text); font-weight: 500; }
+
+  .filter-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .filter-count {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--text-faint);
+    font-weight: 400;
+  }
+  .filter-btn.active .filter-count { color: var(--accent-text); }
+
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat-item {
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    text-align: center;
+  }
+  .stat-num { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--text); }
+  .stat-label { font-size: 11px; color: var(--text-faint); margin-top: 1px; }
+
+  /* NOTICES */
+  .notices-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+  }
+
+  .notices-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 24px;
+    color: var(--text);
+    font-style: italic;
+  }
+
+  .notices-meta { font-size: 13px; color: var(--text-faint); }
+
+  .sort-select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 6px 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    color: var(--text);
+    cursor: pointer;
+    outline: none;
+  }
+
+  .notices-grid { display: flex; flex-direction: column; gap: 1rem; }
+
+  /* NOTICE CARD */
+  .notice-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.25rem 1.25rem 1rem;
+    display: flex;
+    gap: 1rem;
+    box-shadow: var(--shadow-card);
+    transition: box-shadow var(--transition), transform var(--transition), border-color var(--transition);
+    animation: cardIn 0.3s ease both;
+    position: relative;
+    overflow: hidden;
+  }
+  .notice-card:hover { box-shadow: var(--shadow-hover); transform: translateY(-1px); border-color: var(--border-strong); }
+
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .notice-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
+    border-radius: 4px 0 0 4px;
+  }
+
+  .notice-card[data-cat="help"]::before     { background: var(--cat-help); }
+  .notice-card[data-cat="lost"]::before     { background: var(--cat-lost); }
+  .notice-card[data-cat="event"]::before    { background: var(--cat-event); }
+  .notice-card[data-cat="announce"]::before { background: var(--cat-announce); }
+  .notice-card[data-cat="free"]::before     { background: var(--cat-free); }
+
+  /* VOTE */
+  .vote-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding-top: 2px;
+    flex-shrink: 0;
+    min-width: 40px;
+  }
+
+  .vote-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    width: 34px; height: 30px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background var(--transition), border-color var(--transition);
+    color: var(--text-faint);
+  }
+  .vote-btn:hover { background: var(--accent-light); border-color: #B8D8C4; color: var(--accent-text); }
+  .vote-btn.voted { background: var(--accent-light); border-color: var(--accent); color: var(--accent-text); }
+  .vote-btn svg { width: 14px; height: 14px; }
+
+  .vote-count {
+    font-family: 'DM Serif Display', serif;
+    font-size: 18px;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  /* NOTICE BODY */
+  .notice-body { flex: 1; min-width: 0; }
+
+  .notice-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+  }
+
+  .cat-pill {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 99px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .cat-help     { color: var(--cat-help);     background: var(--cat-help-bg); }
+  .cat-lost     { color: var(--cat-lost);     background: var(--cat-lost-bg); }
+  .cat-event    { color: var(--cat-event);    background: var(--cat-event-bg); }
+  .cat-announce { color: var(--cat-announce); background: var(--cat-announce-bg); }
+  .cat-free     { color: var(--cat-free);     background: var(--cat-free-bg); }
+
+  .notice-time { font-size: 12px; color: var(--text-faint); }
+
+  .notice-text {
+    font-size: 15px;
+    color: var(--text);
+    line-height: 1.65;
+    word-break: break-word;
+  }
+
+  .notice-footer {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 10px;
+  }
+
+  .notice-author {
+    font-size: 12px;
+    color: var(--text-faint);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .notice-author svg { width: 12px; height: 12px; }
+
+  /* EMPTY */
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text-faint);
+  }
+  .empty-icon { font-size: 40px; margin-bottom: 1rem; }
+  .empty-title { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--text-muted); margin-bottom: 0.5rem; }
+  .empty-sub { font-size: 14px; }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(28,26,21,0.55);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    backdrop-filter: blur(3px);
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem;
+    width: 100%;
+    max-width: 520px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    animation: modalIn 0.22s ease;
+  }
+
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.95) translateY(8px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+
+  .modal-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px;
+    font-style: italic;
+    color: var(--text);
+  }
+  .modal-sub { font-size: 13px; color: var(--text-faint); margin-top: 2px; }
+
+  .modal-close {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    width: 30px; height: 30px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    transition: background var(--transition);
+  }
+  .modal-close:hover { background: var(--bg); }
+  .modal-close svg { width: 16px; height: 16px; }
+
+  .form-group { margin-bottom: 1.25rem; }
+
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+
+  .cat-picker {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+  }
+
+  .cat-option {
+    display: none;
+  }
+
+  .cat-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 4px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-faint);
+  }
+
+  .cat-label .dot-icon {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+  }
+
+  .cat-option:checked + .cat-label {
+    border-width: 2px;
+    font-weight: 600;
+  }
+  .cat-option[value="help"]:checked + .cat-label     { border-color: var(--cat-help);     color: var(--cat-help);     background: var(--cat-help-bg); }
+  .cat-option[value="lost"]:checked + .cat-label     { border-color: var(--cat-lost);     color: var(--cat-lost);     background: var(--cat-lost-bg); }
+  .cat-option[value="event"]:checked + .cat-label    { border-color: var(--cat-event);    color: var(--cat-event);    background: var(--cat-event-bg); }
+  .cat-option[value="announce"]:checked + .cat-label { border-color: var(--cat-announce); color: var(--cat-announce); background: var(--cat-announce-bg); }
+  .cat-option[value="free"]:checked + .cat-label     { border-color: var(--cat-free);     color: var(--cat-free);     background: var(--cat-free-bg); }
+
+  textarea {
+    width: 100%;
+    min-height: 100px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    color: var(--text);
+    background: var(--bg);
+    resize: vertical;
+    outline: none;
+    transition: border-color var(--transition);
+    line-height: 1.6;
+  }
+  textarea:focus { border-color: var(--accent); }
+  textarea::placeholder { color: var(--text-faint); }
+
+  input[type="text"] {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 9px 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--bg);
+    outline: none;
+    transition: border-color var(--transition);
+  }
+  input[type="text"]:focus { border-color: var(--accent); }
+  input[type="text"]::placeholder { color: var(--text-faint); }
+
+  .char-count {
+    text-align: right;
+    font-size: 12px;
+    color: var(--text-faint);
+    margin-top: 4px;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+  }
+
+  .btn-cancel {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 9px 18px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: background var(--transition);
+  }
+  .btn-cancel:hover { background: var(--bg); }
+
+  .btn-submit {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 9px 22px;
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background var(--transition), transform var(--transition);
+  }
+  .btn-submit:hover { background: #234830; }
+  .btn-submit:active { transform: scale(0.98); }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    background: var(--text);
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    z-index: 300;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.25s, transform 0.25s;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
+    .page { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    header { padding: 0 1rem; }
+    .header-inner { gap: 1rem; }
+    .page { padding: 1rem; }
+    .cat-picker { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <a href="/" class="logo">
+      <span class="logo-name">CivicBoard</span>
+      <span class="logo-badge">Community</span>
+    </a>
+    <div class="health-dot" id="health-indicator">
+      <span class="dot" id="health-dot"></span>
+      <span id="health-text">checking...</span>
+    </div>
+    <div class="header-right">
+      <button class="btn-post" id="open-modal-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Post Notice
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="page">
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Filter by category</div>
+      <div class="filter-list">
+        <button class="filter-btn active" data-filter="all" onclick="filterCategory('all', this)">
+          <span class="filter-dot" style="background:#888;"></span>
+          All Notices
+          <span class="filter-count" id="count-all">0</span>
+        </button>
+        <button class="filter-btn" data-filter="help" onclick="filterCategory('help', this)">
+          <span class="filter-dot" style="background:var(--cat-help);"></span>
+          Help Needed
+          <span class="filter-count" id="count-help">0</span>
+        </button>
+        <button class="filter-btn" data-filter="lost" onclick="filterCategory('lost', this)">
+          <span class="filter-dot" style="background:var(--cat-lost);"></span>
+          Lost &amp; Found
+          <span class="filter-count" id="count-lost">0</span>
+        </button>
+        <button class="filter-btn" data-filter="event" onclick="filterCategory('event', this)">
+          <span class="filter-dot" style="background:var(--cat-event);"></span>
+          Events
+          <span class="filter-count" id="count-event">0</span>
+        </button>
+        <button class="filter-btn" data-filter="announce" onclick="filterCategory('announce', this)">
+          <span class="filter-dot" style="background:var(--cat-announce);"></span>
+          Announcements
+          <span class="filter-count" id="count-announce">0</span>
+        </button>
+        <button class="filter-btn" data-filter="free" onclick="filterCategory('free', this)">
+          <span class="filter-dot" style="background:var(--cat-free);"></span>
+          Free Stuff
+          <span class="filter-count" id="count-free">0</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-title">Board stats</div>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-num" id="stat-total">0</div>
+          <div class="stat-label">Notices</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-num" id="stat-votes">0</div>
+          <div class="stat-label">Upvotes</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-title">How it works</div>
+      <div style="font-size:13px; color:var(--text-muted); line-height:1.7;">
+        Post a notice for your community. Others can upvote what matters most. Use it for help requests, local events, lost items, or free giveaways.
+      </div>
+    </div>
+  </aside>
+
+  <main>
+    <div class="notices-header">
+      <div>
+        <div class="notices-title">Community Notices</div>
+        <div class="notices-meta" id="notices-meta">Loading...</div>
+      </div>
+      <select class="sort-select" id="sort-select" onchange="renderNotices()">
+        <option value="newest">Newest first</option>
+        <option value="votes">Most upvoted</option>
+      </select>
+    </div>
+
+    <div class="notices-grid" id="notices-grid">
+      <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <div class="empty-title">Loading notices...</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- POST MODAL -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Post a Notice</div>
+        <div class="modal-sub">Share something with your community</div>
+      </div>
+      <button class="modal-close" id="close-modal-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <form method="POST" action="/add" id="post-form">
+      <div class="form-group">
+        <label>Category</label>
+        <div class="cat-picker">
+          <input type="radio" name="category" value="help" id="cat-help" class="cat-option" checked>
+          <label for="cat-help" class="cat-label">
+            <span class="dot-icon" style="background:var(--cat-help);"></span>
+            Help
+          </label>
+
+          <input type="radio" name="category" value="lost" id="cat-lost" class="cat-option">
+          <label for="cat-lost" class="cat-label">
+            <span class="dot-icon" style="background:var(--cat-lost);"></span>
+            Lost
+          </label>
+
+          <input type="radio" name="category" value="event" id="cat-event" class="cat-option">
+          <label for="cat-event" class="cat-label">
+            <span class="dot-icon" style="background:var(--cat-event);"></span>
+            Event
+          </label>
+
+          <input type="radio" name="category" value="announce" id="cat-announce" class="cat-option">
+          <label for="cat-announce" class="cat-label">
+            <span class="dot-icon" style="background:var(--cat-announce);"></span>
+            News
+          </label>
+
+          <input type="radio" name="category" value="free" id="cat-free" class="cat-option">
+          <label for="cat-free" class="cat-label">
+            <span class="dot-icon" style="background:var(--cat-free);"></span>
+            Free
+          </label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="name-input">Your name (optional)</label>
+        <input type="text" name="author" id="name-input" placeholder="Anonymous" maxlength="40">
+      </div>
+
+      <div class="form-group">
+        <label for="message-input">Notice</label>
+        <textarea name="message" id="message-input" placeholder="Write your notice here... Be clear and helpful." maxlength="255" required oninput="updateCharCount()"></textarea>
+        <div class="char-count"><span id="char-count">0</span>/255</div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel" id="cancel-btn">Cancel</button>
+        <button type="submit" class="btn-submit">Post Notice</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // State
+  let allNotices = {{ notices_json | tojson }};
+  let activeFilter = 'all';
+  let votedIds = new Set(JSON.parse(localStorage.getItem('civicboard_voted') || '[]'));
+
+  const CAT_LABELS = {
+    help: 'Help Needed',
+    lost: 'Lost & Found',
+    event: 'Event',
+    announce: 'Announcement',
+    free: 'Free Stuff'
+  };
+
+  function timeAgo(dt) {
+    const d = new Date(dt);
+    const diff = Math.floor((Date.now() - d) / 1000);
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+    return Math.floor(diff/86400) + 'd ago';
+  }
+
+  function updateCounts() {
+    const counts = { all: allNotices.length, help: 0, lost: 0, event: 0, announce: 0, free: 0 };
+    let totalVotes = 0;
+    allNotices.forEach(n => {
+      if (counts[n.category] !== undefined) counts[n.category]++;
+      totalVotes += (n.votes || 0);
+    });
+    Object.keys(counts).forEach(k => {
+      const el = document.getElementById('count-' + k);
+      if (el) el.textContent = counts[k];
+    });
+    document.getElementById('stat-total').textContent = allNotices.length;
+    document.getElementById('stat-votes').textContent = totalVotes;
+  }
+
+  function renderNotices() {
+    const sort = document.getElementById('sort-select').value;
+    let notices = activeFilter === 'all' ? [...allNotices] : allNotices.filter(n => n.category === activeFilter);
+
+    if (sort === 'votes') {
+      notices.sort((a, b) => (b.votes || 0) - (a.votes || 0));
+    } else {
+      notices.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    }
+
+    const grid = document.getElementById('notices-grid');
+    const meta = document.getElementById('notices-meta');
+    meta.textContent = notices.length + ' notice' + (notices.length !== 1 ? 's' : '') +
+      (activeFilter !== 'all' ? ' in ' + CAT_LABELS[activeFilter] : ' in total');
+
+    if (notices.length === 0) {
+      grid.innerHTML = `<div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <div class="empty-title">No notices yet</div>
+        <div class="empty-sub">Be the first to post in this category!</div>
+      </div>`;
+      return;
+    }
+
+    grid.innerHTML = notices.map(n => {
+      const catClass = 'cat-' + (n.category || 'announce');
+      const catLabel = CAT_LABELS[n.category] || n.category;
+      const voted = votedIds.has(n.id);
+      const author = n.author && n.author.trim() ? n.author : 'Anonymous';
+      return `<div class="notice-card" data-cat="${n.category || 'announce'}">
+        <div class="vote-col">
+          <button class="vote-btn ${voted ? 'voted' : ''}" onclick="vote(${n.id}, this)" title="${voted ? 'Voted' : 'Upvote'}">
+            <svg viewBox="0 0 24 24" fill="${voted ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2.5"><path d="M12 5l7 7H5l7-7z"/></svg>
+          </button>
+          <span class="vote-count" id="votes-${n.id}">${n.votes || 0}</span>
+        </div>
+        <div class="notice-body">
+          <div class="notice-meta">
+            <span class="cat-pill ${catClass}">${catLabel}</span>
+            <span class="notice-time">${timeAgo(n.created_at)}</span>
+          </div>
+          <div class="notice-text">${escapeHtml(n.message)}</div>
+          <div class="notice-footer">
+            <span class="notice-author">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+              ${escapeHtml(author)}
+            </span>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function filterCategory(cat, btn) {
+    activeFilter = cat;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderNotices();
+  }
+
+  function vote(id, btn) {
+    if (votedIds.has(id)) return;
+    fetch('/upvote/' + id, { method: 'POST' })
+      .then(r => r.json())
+      .then(data => {
+        votedIds.add(id);
+        localStorage.setItem('civicboard_voted', JSON.stringify([...votedIds]));
+        btn.classList.add('voted');
+        btn.querySelector('svg').setAttribute('fill', 'currentColor');
+        document.getElementById('votes-' + id).textContent = data.votes;
+        const notice = allNotices.find(n => n.id === id);
+        if (notice) notice.votes = data.votes;
+        updateCounts();
+        showToast('Upvoted!');
+      })
+      .catch(() => showToast('Could not upvote, try again.'));
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2000);
+  }
+
+  function updateCharCount() {
+    const ta = document.getElementById('message-input');
+    document.getElementById('char-count').textContent = ta.value.length;
+  }
+
+  // Health check
+  fetch('/health').then(r => r.json()).then(d => {
+    const dot = document.getElementById('health-dot');
+    const txt = document.getElementById('health-text');
+    if (d.status === 'healthy') {
+      dot.classList.add('online');
+      txt.textContent = 'Online';
+    } else {
+      txt.textContent = 'Degraded';
+    }
+  }).catch(() => {
+    document.getElementById('health-text').textContent = 'Offline';
+  });
+
+  // Modal
+  document.getElementById('open-modal-btn').addEventListener('click', () => {
+    document.getElementById('modal-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('message-input').focus(), 100);
+  });
+  document.getElementById('close-modal-btn').addEventListener('click', closeModal);
+  document.getElementById('cancel-btn').addEventListener('click', closeModal);
+  document.getElementById('modal-overlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('modal-overlay')) closeModal();
+  });
+  function closeModal() {
+    document.getElementById('modal-overlay').classList.remove('open');
+  }
+
+  // Init
+  updateCounts();
+  renderNotices();
+</script>
+</body>
+</html>
