@@ -1,10 +1,12 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session, flash
+from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
 import mysql.connector
 import os
 import time
-import json
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
 
 def get_db():
     retries = 10
@@ -50,8 +52,27 @@ def init_db():
         except Exception:
             pass  # column already exists
 
+    # Users table for login
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            username VARCHAR(40) UNIQUE NOT NULL,
+            password_hash VARCHAR(255) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
     conn.commit()
     conn.close()
+
+def login_required(view_func):
+    @wraps(view_func)
+    def wrapped(*args, **kwargs):
+        if not session.get("username"):
+            flash("Please log in to do that.")
+            return redirect(url_for("login", next=request.path))
+        return view_func(*args, **kwargs)
+    return wrapped
 
 @app.route("/")
 def index():
@@ -73,13 +94,81 @@ def index():
             "created_at": m["created_at"].strftime("%Y-%m-%dT%H:%M:%S") if m["created_at"] else "",
         })
 
-    return render_template("index.html", notices_json=notices_json)
+    return render_template("index.html", notices_json=notices_json, username=session.get("username"))
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()[:40]
+        password = request.form.get("password", "")
+        confirm  = request.form.get("confirm", "")
+
+        if not username or not password:
+            flash("Username and password are required.")
+            return render_template("register.html")
+
+        if password != confirm:
+            flash("Passwords do not match.")
+            return render_template("register.html")
+
+        if len(password) < 6:
+            flash("Password must be at least 6 characters.")
+            return render_template("register.html")
+
+        conn = get_db()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                "INSERT INTO users (username, password_hash) VALUES (%s, %s)",
+                (username, generate_password_hash(password))
+            )
+            conn.commit()
+        except mysql.connector.errors.IntegrityError:
+            conn.close()
+            flash("That username is already taken.")
+            return render_template("register.html")
+        conn.close()
+
+        flash("Account created! Please log in.")
+        return redirect(url_for("login"))
+
+    return render_template("register.html")
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()[:40]
+        password = request.form.get("password", "")
+
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT id, username, password_hash FROM users WHERE username = %s", (username,))
+        user = cursor.fetchone()
+        conn.close()
+
+        if user and check_password_hash(user["password_hash"], password):
+            session["username"] = user["username"]
+            flash(f"Welcome back, {user['username']}!")
+            next_url = request.args.get("next")
+            return redirect(next_url or url_for("index"))
+
+        flash("Invalid username or password.")
+        return render_template("login.html")
+
+    return render_template("login.html")
+
+@app.route("/logout")
+def logout():
+    session.pop("username", None)
+    flash("You've been logged out.")
+    return redirect(url_for("index"))
 
 @app.route("/add", methods=["POST"])
+@login_required
 def add():
     msg      = request.form.get("message", "").strip()
     category = request.form.get("category", "announce").strip()
-    author   = request.form.get("author", "").strip() or "Anonymous"
+    author   = session.get("username", "Anonymous")
 
     # Validate category
     valid_cats = {"help", "lost", "event", "announce", "free"}
@@ -99,6 +188,7 @@ def add():
     return redirect(url_for("index"))
 
 @app.route("/upvote/<int:msg_id>", methods=["POST"])
+@login_required
 def upvote(msg_id):
     conn   = get_db()
     cursor = conn.cursor(dictionary=True)

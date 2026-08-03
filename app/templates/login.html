@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Log in — CivicBoard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #F5F2EB;
+    --surface: #FDFCF8;
+    --border: #E0DACC;
+    --text: #1C1A15;
+    --text-muted: #6B6559;
+    --text-faint: #A09888;
+    --accent: #2D5A3D;
+    --accent-light: #EAF3E6;
+    --accent-text: #1A3D28;
+    --error: #7B3E1C;
+    --error-bg: #FDF0E8;
+    --radius: 12px;
+    --radius-sm: 6px;
+    --transition: 0.18s ease;
+  }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  .auth-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2.5rem;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+  }
+  .logo { display: flex; align-items: baseline; gap: 0.5rem; text-decoration: none; margin-bottom: 0.25rem; }
+  .logo-name { font-family: 'DM Serif Display', serif; font-size: 24px; color: var(--text); }
+  .logo-badge {
+    font-size: 11px; font-weight: 500; color: var(--accent-text);
+    background: var(--accent-light); border: 1px solid #B8D8C4;
+    padding: 2px 8px; border-radius: 99px;
+  }
+  .auth-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px; font-style: italic; margin: 1.25rem 0 0.25rem;
+  }
+  .auth-sub { font-size: 13px; color: var(--text-faint); margin-bottom: 1.5rem; }
+  .flash {
+    background: var(--error-bg); color: var(--error);
+    border: 1px solid #F0D8C4; border-radius: var(--radius-sm);
+    padding: 8px 12px; font-size: 13px; margin-bottom: 1rem;
+  }
+  .form-group { margin-bottom: 1.1rem; }
+  label { display: block; font-size: 13px; font-weight: 500; color: var(--text-muted); margin-bottom: 6px; }
+  input[type="text"], input[type="password"] {
+    width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 10px 12px; font-family: 'DM Sans', sans-serif; font-size: 14px;
+    color: var(--text); background: var(--bg); outline: none;
+    transition: border-color var(--transition);
+  }
+  input:focus { border-color: var(--accent); }
+  .btn-submit {
+    width: 100%; background: var(--accent); color: #fff; border: none;
+    padding: 11px 18px; border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif;
+    font-size: 14px; font-weight: 500; cursor: pointer; margin-top: 0.5rem;
+    transition: background var(--transition);
+  }
+  .btn-submit:hover { background: #234830; }
+  .auth-footer { text-align: center; font-size: 13px; color: var(--text-faint); margin-top: 1.5rem; }
+  .auth-footer a { color: var(--accent-text); text-decoration: none; font-weight: 500; }
+  .auth-footer a:hover { text-decoration: underline; }
+  .back-link {
+    display: inline-block; font-size: 13px; color: var(--text-faint);
+    text-decoration: none; margin-top: 1.25rem;
+  }
+  .back-link:hover { color: var(--text-muted); }
+</style>
+</head>
+<body>
+  <div class="auth-card">
+    <a href="/" class="logo">
+      <span class="logo-name">CivicBoard</span>
+      <span class="logo-badge">Community</span>
+    </a>
+    <div class="auth-title">Welcome back</div>
+    <div class="auth-sub">Log in to post and upvote notices.</div>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for msg in messages %}
+          <div class="flash">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('login', next=request.args.get('next')) }}">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" name="username" id="username" required maxlength="40" autofocus>
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" name="password" id="password" required>
+      </div>
+      <button type="submit" class="btn-submit">Log in</button>
+    </form>
+
+    <div class="auth-footer">
+      New here? <a href="{{ url_for('register') }}">Create an account</a>
+    </div>
+    <div style="text-align:center;">
+      <a href="/" class="back-link">&larr; Back to the board</a>
+    </div>
+  </div>
+</body>
+</html>
